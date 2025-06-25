@@ -3,8 +3,7 @@ import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
+// Note: dynamic and runtime exports removed for static build compatibility
 
 export async function POST(request: NextRequest) {
   try {
