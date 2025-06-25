@@ -1,0 +1,36 @@
+name = "taxi-platform"
+compatibility_date = "2024-01-15"
+
+[env.production]
+name = "taxi-platform-prod"
+
+# D1 Database Configuration
+[[d1_databases]]
+binding = "DB"
+database_name = "taxi-platform-db"
+database_id = "your-d1-database-id"
+
+# Environment Variables
+[env.production.vars]
+NODE_ENV = "production"
+JWT_SECRET = "your-production-jwt-secret"
+GOVERNMENT_API_URL = "https://api.government.be/taxi"
+GOVERNMENT_API_KEY = "your-government-api-key"
+
+# Pages Configuration
+[build]
+command = "npm run build:cloudflare"
+destination = "dist"
+
+# Function Routes
+[[routes]]
+pattern = "/api/taxi-meter/*"
+zone_name = "bb-platform.pages.dev"
+
+[[routes]]
+pattern = "/api/drivers/*"
+zone_name = "bb-platform.pages.dev"
+
+[[routes]]
+pattern = "/api/bookings/*"
+zone_name = "bb-platform.pages.dev" 

@@ -1,0 +1,507 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== AUTHENTICATION & USERS =====
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(RIDER)
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  
+  // Relations
+  companyUser   CompanyUser[]
+  driverProfile Driver?
+  riderBookings Booking[]
+  tripLogs      TripLog[]
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum UserRole {
+  ADMIN
+  COMPANY_ADMIN
+  DRIVER
+  RIDER
+}
+
+// ===== COMPANY MANAGEMENT =====
+model Company {
+  id                    String            @id @default(cuid())
+  name                  String
+  address               String
+  taxNumber             String            @unique
+  taxiLicenseNumber     String            @unique
+  contactPersonName     String
+  contactPersonEmail    String
+  contactPersonPhone    String
+  email                 String
+  phone                 String
+  bankAccount           String?
+  subscriptionType      SubscriptionType  @default(BASIC)
+  logo                  String?
+  status                CompanyStatus     @default(PENDING)
+  
+  // API Integration
+  chironClientId        String?
+  chironClientSecret    String?
+  chironJwtTokenId      String?
+  
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  // Relations
+  vehicles              Vehicle[]
+  drivers               Driver[]
+  tariffs               Tariff[]
+  users                 CompanyUser[]
+  subscriptions         Subscription[]
+  bookings              Booking[]
+  tripLogs              TripLog[]
+
+  @@map("companies")
+}
+
+model CompanyUser {
+  id        String   @id @default(cuid())
+  userId    String
+  companyId String
+  role      String   @default("MEMBER")
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@map("company_users")
+}
+
+enum SubscriptionType {
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum CompanyStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+// ===== VEHICLE MANAGEMENT =====
+model Vehicle {
+  id                    String        @id @default(cuid())
+  companyId             String
+  licensePlate          String        @unique
+  brand                 String
+  model                 String
+  year                  Int
+  color                 String
+  taxiLicenseNumber     String
+  insuranceExpiry       DateTime
+  keuringExpiry         DateTime      // MOT/Inspection expiry
+  pictures              String        // JSON string of image URLs
+  status                VehicleStatus @default(ACTIVE)
+  
+  // Taxi Light Integration
+  taxiLightWebhookOnUrl  String?
+  taxiLightWebhookOffUrl String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  company               Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  drivers               Driver[]
+  tariffs               Tariff[]
+  bookings              Booking[]
+  tripLogs              TripLog[]
+  locationUpdates       LocationUpdate[]
+
+  @@map("vehicles")
+}
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  INACTIVE
+}
+
+// ===== DRIVER MANAGEMENT =====
+model Driver {
+  id                    String       @id @default(cuid())
+  userId                String       @unique
+  companyId             String
+  vehicleId             String?
+  firstName             String
+  lastName              String
+  taxiDriverLicense     String       @unique
+  licenseExpiry         DateTime
+  address               String
+  phone                 String
+  email                 String
+  picture               String?
+  status                DriverStatus @default(ACTIVE)
+  
+  // Live tracking
+  isOnline              Boolean      @default(false)
+  currentLatitude       Float?
+  currentLongitude      Float?
+  lastLocationUpdate    DateTime?
+  
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  // Relations
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company               Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle               Vehicle?     @relation(fields: [vehicleId], references: [id])
+  bookings              Booking[]
+  tripLogs              TripLog[]
+  locationUpdates       LocationUpdate[]
+
+  @@map("drivers")
+}
+
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+// ===== TARIFF MANAGEMENT =====
+model Tariff {
+  id                String      @id @default(cuid())
+  companyId         String
+  vehicleId         String?
+  name              String
+  code              String
+  type              TariffType  @default(METER_BASED)
+  startPrice        Float
+  pricePerKm        Float
+  pricePerMinute    Float
+  nightSurcharge    Float       @default(0)
+  weekendSurcharge  Float       @default(0)
+  isActive          Boolean     @default(true)
+  
+  // Time-based pricing
+  nightStartTime    String?     // "22:00"
+  nightEndTime      String?     // "06:00"
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  // Relations
+  company           Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicle           Vehicle?    @relation(fields: [vehicleId], references: [id])
+  bookings          Booking[]
+  // tripLogs relationship removed - use tariffUsed field for lookup
+
+  @@map("tariffs")
+}
+
+enum TariffType {
+  METER_BASED
+  FIXED_BASED
+}
+
+// ===== BOOKING SYSTEM =====
+model Booking {
+  id                String        @id @default(cuid())
+  riderId           String
+  companyId         String
+  driverId          String?
+  vehicleId         String?
+  tariffId          String
+  
+  // Location data
+  pickupLatitude    Float
+  pickupLongitude   Float
+  pickupAddress     String
+  destinationLatitude Float?
+  destinationLongitude Float?
+  destinationAddress String?
+  
+  // Booking details
+  estimatedPrice    Float?
+  finalPrice        Float?
+  estimatedDuration Int?           // minutes
+  actualDuration    Int?           // minutes
+  distance          Float?         // kilometers
+  
+  // Rider information
+  riderName         String
+  riderPhone        String
+  notes             String?
+  
+  // Timing
+  scheduledTime     DateTime?
+  acceptedAt        DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  
+  status            BookingStatus @default(PENDING)
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  rider             User          @relation(fields: [riderId], references: [id])
+  company           Company       @relation(fields: [companyId], references: [id])
+  driver            Driver?       @relation(fields: [driverId], references: [id])
+  vehicle           Vehicle?      @relation(fields: [vehicleId], references: [id])
+  tariff            Tariff        @relation(fields: [tariffId], references: [id])
+  tripLog           TripLog?
+
+  @@map("bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// ===== TRIP LOGGING SYSTEM =====
+model TripLog {
+  id                String       @id @default(cuid())
+  parentId          String?      // For nested logs
+  logType           LogType
+  
+  // Relations
+  companyId         String
+  vehicleId         String?
+  driverId          String?
+  userId            String?      // User who created the log
+  bookingId         String?      @unique
+  
+  // Trip details
+  startLatitude     Float?
+  startLongitude    Float?
+  startAddress      String?
+  endLatitude       Float?
+  endLongitude      Float?
+  endAddress        String?
+  
+  distance          Float?       // kilometers
+  duration          Int?         // minutes
+  finalPrice        Float?
+  tariffUsed        String?
+  
+  // Government API integration
+  governmentTripId  String?      // ID from government system
+  tripStartApiSent  Boolean      @default(false)
+  tripEndApiSent    Boolean      @default(false)
+  apiErrorLog       String?
+  
+  // Log details (JSON for flexibility)
+  logDetails        Json?
+  
+  // Timestamps
+  tripStartTime     DateTime?
+  tripEndTime       DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  // Relations
+  company           Company      @relation(fields: [companyId], references: [id])
+  vehicle           Vehicle?     @relation(fields: [vehicleId], references: [id])
+  driver            Driver?      @relation(fields: [driverId], references: [id])
+  user              User?        @relation(fields: [userId], references: [id])
+  booking           Booking?     @relation(fields: [bookingId], references: [id])
+  // tariff relationship - will need to be resolved by code lookup
+  
+  parent            TripLog?     @relation("TripLogHierarchy", fields: [parentId], references: [id])
+  children          TripLog[]    @relation("TripLogHierarchy")
+  apiRequests       GovernmentApiRequest[]
+
+  @@map("trip_logs")
+}
+
+enum LogType {
+  TRIP_START
+  TRIP_END
+  METER_ON
+  METER_OFF
+  DRIVER_LOGIN
+  DRIVER_LOGOUT
+  TARIFF_CHANGE
+  SYSTEM_EVENT
+  ERROR_LOG
+}
+
+// ===== GOVERNMENT API INTEGRATION =====
+model GovernmentApiRequest {
+  id              String            @id @default(cuid())
+  tripLogId       String
+  requestType     ApiRequestType
+  endpoint        String
+  payload         Json
+  response        Json?
+  statusCode      Int?
+  success         Boolean           @default(false)
+  errorMessage    String?
+  retryCount      Int               @default(0)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  tripLog         TripLog           @relation(fields: [tripLogId], references: [id], onDelete: Cascade)
+
+  @@map("government_api_requests")
+}
+
+enum ApiRequestType {
+  TRIP_START
+  TRIP_END
+  DRIVER_REGISTRATION
+  VEHICLE_REGISTRATION
+}
+
+// ===== REAL-TIME LOCATION TRACKING =====
+model LocationUpdate {
+  id          String   @id @default(cuid())
+  driverId    String
+  vehicleId   String
+  latitude    Float
+  longitude   Float
+  accuracy    Float?   // GPS accuracy in meters
+  speed       Float?   // km/h
+  heading     Float?   // degrees
+  altitude    Float?   // meters
+  
+  createdAt   DateTime @default(now())
+
+  // Relations
+  driver      Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@map("location_updates")
+}
+
+// ===== SUBSCRIPTION MANAGEMENT =====
+model Subscription {
+  id                String             @id @default(cuid())
+  companyId         String
+  subscriptionType  SubscriptionType
+  status            SubscriptionStatus @default(ACTIVE)
+  startDate         DateTime
+  endDate           DateTime?
+  pricePerMonth     Float
+  
+  // Payment details
+  paymentProvider   String?            // "stripe", "paypal", etc.
+  externalId        String?            // External subscription ID
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  // Relations
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payments          Payment[]
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+// ===== PAYMENT SYSTEM =====
+model Payment {
+  id              String        @id @default(cuid())
+  subscriptionId  String
+  amount          Float
+  currency        String        @default("EUR")
+  status          PaymentStatus @default(PENDING)
+  
+  // Payment provider details
+  provider        String        // "stripe", "paypal", etc.
+  externalId      String?       // External payment ID
+  paymentMethod   String?       // "card", "bank_transfer", etc.
+  
+  // Billing period
+  periodStart     DateTime
+  periodEnd       DateTime
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
