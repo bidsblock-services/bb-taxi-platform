@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && npx prisma generate",
-    "build:cloudflare": "set BUILD_STATIC=true && npm run build && npm run copy-functions",
+    "build:cloudflare": "set BUILD_STATIC=true && npm run build:static && npm run copy-functions",
+    "build:static": "next build",
     "copy-functions": "xcopy functions dist\\functions\\ /E /I /H /Y",
     "start": "next start",
     "lint": "next lint",
