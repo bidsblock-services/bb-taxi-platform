@@ -103,5 +103,24 @@ export async function onRequest(context) {
   console.log(`✅ Created function for ${route}`);
 });
 
+// Copy _redirects file for routing
+if (fs.existsSync('public/_redirects')) {
+  fs.copyFileSync('public/_redirects', path.join(outputDir, '_redirects'));
+  console.log('✅ Copied _redirects file');
+}
+
+// Create _headers file for security
+const headersContent = `/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable`;
+
+fs.writeFileSync(path.join(outputDir, '_headers'), headersContent);
+console.log('✅ Created _headers file');
+
 console.log('🎉 Build prepared for Cloudflare Pages!');
 console.log(`📁 Output directory: ${outputDir}`); 

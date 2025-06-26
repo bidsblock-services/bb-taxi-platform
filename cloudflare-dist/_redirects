@@ -1,0 +1,13 @@
+# Handle client-side routing
+/*    /index.html   200
+
+# API routes to functions
+/api/*    /_functions/:splat   200
+
+# Specific page routes
+/drivers    /drivers.html   200
+/riders     /riders.html    200
+
+# Error pages
+/404        /404.html       200
+/500        /500.html       200 
