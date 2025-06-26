@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && npx prisma generate",
-    "build:cloudflare": "npm run build",
+    "build:cloudflare": "npm run build && node scripts/prepare-cloudflare.js",
     "build:static": "next build",
     "copy-functions": "cp -r functions dist/functions || echo 'No functions directory to copy'",
     "start": "next start",

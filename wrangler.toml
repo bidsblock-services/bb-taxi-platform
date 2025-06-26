@@ -20,17 +20,17 @@ GOVERNMENT_API_KEY = "your-government-api-key"
 # Pages Configuration
 [build]
 command = "npm run build:cloudflare"
-destination = "dist"
+destination = "cloudflare-dist"
 
 # Function Routes
 [[routes]]
 pattern = "/api/taxi-meter/*"
-zone_name = "bb-platform.pages.dev"
+zone_name = "bb-taxi-platform.pages.dev"
 
 [[routes]]
 pattern = "/api/drivers/*"
-zone_name = "bb-platform.pages.dev"
+zone_name = "bb-taxi-platform.pages.dev"
 
 [[routes]]
 pattern = "/api/bookings/*"
-zone_name = "bb-platform.pages.dev" 
+zone_name = "bb-taxi-platform.pages.dev" 

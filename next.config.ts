@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Removed static export - Cloudflare Pages will handle API routes as Functions
-  trailingSlash: true,
+  // Configure for Cloudflare Pages - use standard build with Functions support
   images: {
     unoptimized: true
   },
@@ -23,7 +22,7 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NODE_ENV === 'production' 
-      ? 'https://bb-platform.pages.dev' 
+      ? 'https://bb-taxi-platform.pages.dev' 
       : 'http://localhost:3000'
   }
 };
