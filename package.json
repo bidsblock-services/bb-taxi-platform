@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build && npx prisma generate",
-    "build:cloudflare": "npm run build && npm run copy-functions",
+    "build:cloudflare": "npm run build",
     "build:static": "next build",
-    "copy-functions": "xcopy functions dist\\functions\\ /E /I /H /Y",
+    "copy-functions": "cp -r functions dist/functions || echo 'No functions directory to copy'",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "npx prisma generate",
