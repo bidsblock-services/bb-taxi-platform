@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@prisma/client']
   },
+  // Exclude cache files from build output for Cloudflare Pages size limits
+  webpack: (config, { isServer }) => {
+    // Disable webpack cache for production builds to avoid large cache files
+    if (process.env.NODE_ENV === 'production') {
+      config.cache = false;
+    }
+    return config;
+  },
   env: {
     NEXT_PUBLIC_API_URL: process.env.NODE_ENV === 'production' 
       ? 'https://bb-platform.pages.dev' 

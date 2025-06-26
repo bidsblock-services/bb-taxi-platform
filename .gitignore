@@ -52,6 +52,12 @@ wrangler.toml.bak
 **/server-production/
 **/edge-server-production/
 
+# Webpack cache files (too large for Cloudflare Pages)
+**/cache/
+**/cache/**
+.next/cache/
+dist/cache/
+
 # Database files
 *.db
 *.db-journal
