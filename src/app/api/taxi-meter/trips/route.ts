@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import jwt from 'jsonwebtoken'
 
-// Note: dynamic and runtime exports removed for static build compatibility
+export const dynamic = 'force-dynamic'
 
 // Middleware to verify JWT token
 async function verifyToken(request: NextRequest) {

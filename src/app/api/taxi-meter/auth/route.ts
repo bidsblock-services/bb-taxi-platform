@@ -3,7 +3,7 @@ import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
-// Note: dynamic and runtime exports removed for static build compatibility
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {

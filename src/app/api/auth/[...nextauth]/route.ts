@@ -5,7 +5,7 @@ import GoogleProvider from "next-auth/providers/google"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 
-// Note: dynamic and runtime exports removed for static build compatibility
+export const dynamic = 'force-dynamic'
 
 const handler = NextAuth({
   adapter: PrismaAdapter(db),
